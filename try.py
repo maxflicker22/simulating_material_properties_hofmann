@@ -1,9 +1,11 @@
 
+
 import numpy as np
 import matplotlib.pyplot as plt  # Added import for Matplotlib
 
-
 # %%
+
+
 
 # Example plot
 x = np.linspace(0, 10, 100)
