@@ -16,7 +16,7 @@ a1_2_np = np.array([1, 0], dtype=np.float32)
 a2_2_np = np.array([0.5, np.sqrt(3)/2], dtype=np.float32)  # hexagonal
 
 # Example input shape: 2 x n²
-n = 20 # Change this to your actual grid size
+n = 10 # Change this to your actual grid size
 
 # Generate reciprocal lattice points
 lattice_points_0 = return_reciprocal_lattice_points(a1_0_np, a2_0_np, n)
@@ -89,45 +89,17 @@ class VectorDataset(Dataset):
 
 
 # get Test Data
-def get_test_data(batch_size, batch_length, shuffle=True):
+def get_test_data(batch_size, shuffle=True):
     """
-    Returns a batch of size (batch_size, batch_length * 2) with m random (x, y) pairs
-    extracted from each full input vector in the batch.
-    
-    batch_length = number of (x, y) pairs to randomly sample per input.
+    Returns a DataLoader for the test data.
     """
+    # Create dataset and dataloader
     dataset = VectorDataset(X, Y)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
     for inputs, targets in dataloader:
-        # inputs: shape (batch_size, 2N)
-        N = inputs.shape[1] // 2  # number of (x, y) pairs in full input
-        assert batch_length <= N, "Requested more pairs than available in input"
-
-        new_inputs = []
-        print("print(inputs.shape[0])", inputs.shape[0])
-        while(len(new_inputs) < batch_size - (inputs.shape[0] + 1)):
-            # Randomly select m pairs from each input
-            # inputs: shape (batch_size, 2N)
-            # targets: shape (batch_size, 4)
-            # N = number of (x, y) pairs in full input
-            # batch_length = number of (x, y) pairs to randomly sample per input
-
-            # Reshape inputs to get (x, y) pairs
-            # inputs: shape (batch_size, 2N) → (batch_size, N, 2)
-            for sample in inputs:
-                # Reconstruct (x, y) pairs: shape (N, 2)
-                xy_pairs = sample.view(N, 2)
-
-                # Randomly select m pairs without replacement
-                indices = torch.randperm(N)[:batch_length]
-                selected = xy_pairs[indices]  # shape: (batch_length, 2)
-
-                new_inputs.append(selected.flatten())  # shape: (2 * batch_length,)
-
-            # Stack all modified inputs into a new batch
-        new_inputs = torch.stack(new_inputs)  # shape: (batch_size, 2 * batch_length)
-
-        return new_inputs, targets  # targets remain unchanged
+        #print("inputs shape:", inputs.shape)
+        #print("targets shape:", targets.shape)
+        return inputs, targets
 
 # %%

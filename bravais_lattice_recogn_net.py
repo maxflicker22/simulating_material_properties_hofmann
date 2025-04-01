@@ -28,9 +28,9 @@ class BravaisLatticeRecognitionNet(nn.Module):
 
 
 # Generate test data
-input_test_data, target_test_data = get_test_data(batch_size=32, batch_length=10, shuffle=True)
+input_test_data, target_test_data = get_test_data(batch_size=32, shuffle=True)
 print("Input test data shape:", input_test_data.shape)  # Should be (2, 2*n²)
-print("Input test data:", input_test_data)
+#print("Input test data:", input_test_data)
 print("Target test data shape:", target_test_data.shape)  # Should be (2, 4)
 print("Target test data:", target_test_data)
 # %%
