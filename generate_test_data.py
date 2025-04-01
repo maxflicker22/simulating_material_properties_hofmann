@@ -4,12 +4,16 @@ import matplotlib.pyplot as plt
 
 # ChatGPT frage: how to plot a 2d bravais lattice with python
 
+# ChatGPT frage: my output are 2 Vectors which have each a x and y component. i wanna predict the x and y components of those two vectors. so summarized i have 4 outputs. 
+# The input are N points where each point has x and y components so 2 times N Inputs
+
+
 # Define lattice vectors (example: oblique lattice)
 a1 = np.array([[1, 0], [1,0], [1,0]])
 a2 = np.array([[0, 1], [0, 2], [0.5, np.sqrt(3)/2]])  # 60° angle
 
 # Grid size (how many unit cells in each direction)
-N = 10
+#N = 10
 
 
 # Generate lattice Points of specific lattic Vectors and Integer Range
@@ -37,14 +41,21 @@ def reciprocal_lattice_2d(a1, a2):
     
     return b1, b2
 
-b1, b2 = np.zeros_like(a1), np.zeros_like(a2)
+# b1, b2 = np.zeros_like(a1), np.zeros_like(a2)
 
-for i in range(len(a1)):
-    b1[i], b2[i] = reciprocal_lattice_2d(a1[i], a2[i])
+# for i in range(len(a1)):
+#    b1[i], b2[i] = reciprocal_lattice_2d(a1[i], a2[i])
+
+# Function to generate reciprocal lattice points and return them
+def return_reciprocal_lattice_points(a1, a2, N):
+    b1, b2 = reciprocal_lattice_2d(a1, a2)
+    lattice_points = generate_lattice_points(b1, b2, N)
+    return lattice_points.T.astype(np.float32)  # Now shape: (2, N*N)
 
 
 # Generate Test Plot of the Lattice
 # Plot
+"""
 plt.figure(figsize=(6, 6))
 for i in range(len(a1)):
     lattice_points = generate_lattice_points(a1[i, :], a2[i, :], N)
@@ -69,5 +80,5 @@ plt.xlabel("x")
 plt.ylabel("y")
 plt.grid(True)
 plt.show()
-
+"""
 # %%
