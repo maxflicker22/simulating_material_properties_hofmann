@@ -3,11 +3,10 @@ import torch
 import torch.nn as nn
 from torch_dataset import get_test_data
 
+
 class BravaisLatticeRecognitionNet(nn.Module):
     def __init__(self, num_points):
         super(BravaisLatticeRecognitionNet, self).__init__(),
-
-        input_size = 2 * num_points # 2D coordinates for each point
 
         self.model = nn.Sequential(
             nn.Linear(input_size, 64),
@@ -21,19 +20,31 @@ class BravaisLatticeRecognitionNet(nn.Module):
 
     def forward(self, x):
         # x shape: (batch_size, num_points, 2)
-        x = x.view(x.size(0), -1)  # flatten to (batch_size, input_size)
+        #x = x.view(x.size(0), -1)  # flatten to (batch_size, input_size)
         return self.model(x)  # linear output, shape: (batch_size, 4)
 
 
 
-
+# %%
 # Generate test data
 input_test_data, target_test_data = get_test_data(batch_size=32, shuffle=True)
-print("Input test data shape:", input_test_data.shape)  # Should be (2, 2*n²)
-#print("Input test data:", input_test_data)
+print("Input test data shape:", input_test_data.shape[1])  # Should be (2, 2*n²)
+print("Input test data:", input_test_data)
 print("Target test data shape:", target_test_data.shape)  # Should be (2, 4)
 print("Target test data:", target_test_data)
+
+
 # %%
+# Test the model
+num_points = input_test_data.shape[1] # Number of points in the lattice
+model = BravaisLatticeRecognitionNet(num_points)
+output_test_data = model(input_test_data)
+print("Output test data shape:", output_test_data.shape)  # Should be (2, 4)
+print("Output test data:", output_test_data)
+# %%
+
+
+
 
 
 """

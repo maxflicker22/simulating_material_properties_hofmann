@@ -34,8 +34,8 @@ assert input2.shape == (2, (2*n + 1) ** 2), "Input2 shape mismatch: expected (2,
 assert input3.shape == (2, (2*n + 1) ** 2), "Input3 shape mismatch: expected (2, (2n+1)²), got {}".format(input3.shape)
 
 
-print("input1 shape:", input1.shape)  # Should be (2, n²)   
-print("input1:", input1)  # Print the input tensor
+#print("input1 shape:", input1.shape)  # Should be (2, n²)   
+#print("input1:", input1)  # Print the input tensor
 
 
 # Convert NumPy arrays to torch tensors
