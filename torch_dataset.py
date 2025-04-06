@@ -88,10 +88,10 @@ class VectorDataset(Dataset):
 
 
 
-# get Test Data
-def get_test_data(batch_size, shuffle=True):
+# get Train Data
+def get_train_data(batch_size, shuffle=True):
     """
-    Returns a DataLoader for the test data.
+    Returns a DataLoader for the train data.
     """
     # Create dataset and dataloader
     dataset = VectorDataset(X, Y)
