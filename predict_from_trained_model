@@ -1,0 +1,21 @@
+import torch
+import numpy as np
+from bravais_lattice_recogn_net import BravaisLatticeRecognitionNet  # Adjust if your class is in another file
+
+# === Load model ===
+checkpoint_path = "training_checkpoints/my_ckpt.pt"
+num_points = 25  # or whatever value you trained with
+
+model = BravaisLatticeRecognitionNet(num_points)
+model.load_state_dict(torch.load(checkpoint_path, map_location=torch.device("cpu")))
+model.eval()
+
+# === Prepare example input ===
+# Example: batch of 1 sample, 25 points with 2D coordinates
+example_input = torch.randn(1, num_points, 2)  # shape: (batch_size, num_points, 2)
+
+# === Predict ===
+with torch.no_grad():
+    prediction = model(example_input)
+
+print("Predicted lattice vectors (flattened):", prediction.numpy())
