@@ -1,4 +1,4 @@
-#!/Users/markusflicker/PycharmProjects/simulating_material_properties/hofmann_oliver/.venv/bin/python3.10
+#!/Users/markusflicker/PycharmProjects/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -1,10 +1,11 @@
 # %%
 import comet_ml
 COMET_API_KEY = "YpvtAhxzAypP59UQx6Wxey7vk"
-COMET_PROJECT_NAME = "bravais-lattice-recognition_5_lattice_vectors"
+COMET_PROJECT_NAME = "bravais-lattice-recognition_5_lattice_vectors_classification"
 from tqdm import tqdm
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch_dataset import get_train_data
 import os
 import matplotlib.pyplot as plt
@@ -25,51 +26,58 @@ assert COMET_API_KEY != "", "Please insert your Comet API Key"
 
 
 class BravaisLatticeRecognitionNet(nn.Module):
-    def __init__(self, num_points):
+    def __init__(self, num_points, vocab_size=5, hidden_dim=128, num_layers=3):
         super(BravaisLatticeRecognitionNet, self).__init__(),
 
-        self.model = nn.Sequential(
-            nn.Linear(num_points, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 4)  # Output: [x1, y1, x2, y2]
-        )
+        self.hidden_layers = nn.ModuleList()
 
-  
+        self.input_dim = num_points
+
+        for i in range(num_layers):
+           in_dim = self.input_dim if i == 0 else hidden_dim
+           self.hidden_layers.append(nn.Linear(in_dim, hidden_dim))
+        
+        self.output_layer = nn.Linear(hidden_dim, vocab_size)  # Output layer for 4 classes
+        self.activation = nn.ReLU()
+
+
+
     def forward(self, x):
-        # x shape: (batch_size, num_points, 2)
-        #x = x.view(x.size(0), -1)  # flatten to (batch_size, input_size)
-        out = self.model(x)        # shape: (batch_size, 4)
-        #norm = torch.norm(out, dim=1, keepdim=True) + 1e-8  # avoid division by zero
-        out_normalized = out / 1
-        return out_normalized
+      for layer in self.hidden_layers:
+         x = self.activation(layer(x))  # Apply activation function after each layer
+
+      logits = self.output_layer(x)  # shape: (batch_size, vocab_size)
+      return logits
     
+
+### Load training data ###
+
+batch_size = 16
+
+input_train_data, target_train_data, input_test_data, target_test_data = get_train_data(batch_size, shuffle=True)  # returns torch tensors
+num_points = input_train_data.shape[1]
+
+
+
 ### Hyperparameter setting and optimization ###
 
 # Model parameters:
 params = dict(
-  num_training_iterations = 1500,  # Increase this to train longer
-  batch_size = 5,  # Experiment between 1 and 64
-  learning_rate = 5e-4,  # Experiment between 1e-5 and 1e-1
-  #hidden_size = 1024,  # Experiment between 1 and 2048
+  num_training_iterations = 3000,  # Increase this to train longer
+  batch_size = batch_size,  # Experiment between 1 and 64
+  learning_rate = 5e-5,  # Experiment between 1e-5 and 1e-1
+  hidden_dim = 512,  # Experiment between 1 and 2048
   shuffle = True,  # Shuffle the data
+  num_layers = 16,  # Number of hidden layers
+  vocab_size = 5,  # Number of classes
+  num_points = num_points,  # Number of points in the input
+  activation = "ReLU",  # Activation function
 )
     
 # Training Method
 def train_step(x, y):
     # Set model to training mode
-    model.train()
+    model.train() # Random Zeros
     
     # Zero gradients for every step
     optimizer.zero_grad()
@@ -86,7 +94,7 @@ def train_step(x, y):
     #)
 
     # Compute loss
-    loss = loss_fn(y, y_hat)
+    loss = loss_fn(y_hat, y)
     
     # Backward pass
     loss.backward()
@@ -126,17 +134,18 @@ os.makedirs(checkpoint_dir, exist_ok=True)
 # Get Device for GPU/CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-input_train_data, target_train_data = get_train_data(params["batch_size"], shuffle=True)  # returns torch tensors
-num_points = input_train_data.shape[1]
-print("num_points:", num_points)
+
 
 ### Define optimizer and training operation ###
 
 # Model, loss, optimizer
 
-model = BravaisLatticeRecognitionNet(num_points)
-loss_fn = nn.MSELoss()
+model = BravaisLatticeRecognitionNet(params["num_points"], params["vocab_size"], params["hidden_dim"], params["num_layers"])
+print("Model structure:", model)
+loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=params["learning_rate"])
+
+
 
 # Move the model to the GPU
 model.to(device)
@@ -153,7 +162,7 @@ if hasattr(tqdm, '_instances'): tqdm._instances.clear() # clear if it exists
 for iter in tqdm(range(params["num_training_iterations"])):
 
     # Grab a batch and propagate it through the network
-    x_batch, y_batch = get_train_data(params["batch_size"], shuffle=params["shuffle"]) # returns torch tensors
+    x_batch, y_batch, _, _  = get_train_data(params["batch_size"], shuffle=params["shuffle"]) # returns torch tensors
 
     #x_batch = torch.tensor(x_batch, dtype=torch.long).to(device)
     #y_batch = torch.tensor(y_batch, dtype=torch.long).to(device)
@@ -187,33 +196,29 @@ experiment.end()
 
 ### Predict Crystal Lattice ###
 
+# Predict the class of a batch of input data
+def predict_one_hot(model, x):
+    model.eval()
+    with torch.no_grad():
+        logits = model(x)  # raw output
+        probs = torch.softmax(logits, dim=1)  # convert to probabilities
+        predicted_indices = probs.argmax(dim=1)  # get the class with max prob
 
-output_fin = model(input_train_data)
-print("Final output shape:", output_fin.shape)  # Should be (batch_size, 4)
-print("Final output:", output_fin)
-print("Target test data:", target_train_data)
+        # Convert indices to one-hot vectors
+        one_hot = F.one_hot(predicted_indices, num_classes=probs.size(1)).float()
 
-"""
-# Plot input and output points
-plt.figure(figsize=(6, 6))
+        return one_hot  # shape: (batch_size, num_classes)
 
-for i in range(len(input_train_data)):
-    # Convert PyTorch tensors to NumPy arrays
-    input_points = input_train_data[i].detach().cpu().numpy().reshape(-1, 2)
-    output_points = output_fin[i].detach().cpu().numpy().reshape(-1, 2)
 
-    # Plot input points (only label once)
-    plt.scatter(input_points[:, 0], input_points[:, 1], s=30, label='Input Points' if i == 0 else "")
 
-    # Plot output points (only label once)
-    plt.scatter(output_points[:, 0], output_points[:, 1], s=30, label='Output Points' if i == 0 else "")
+predicted = predict_one_hot(model, input_test_data)
 
-plt.legend()
-plt.title("Input vs. Output Points")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid(True)
-plt.axis("equal")
-plt.show()
 
-"""
+accuracy = (predicted.argmax(dim=1)  == target_test_data.argmax(dim=1)).float().mean()
+print("Accuracy:", (predicted.argmax(dim=1)  == target_test_data.argmax(dim=1)).float())  # Should be close to 1.0
+percent_right = torch.sum(accuracy) # Relative error
+print("Final output shape:", predicted.shape)  # Should be (batch_size, 5)
+print("Final output:", predicted)
+print("Final input:", target_test_data)
+print("Prozent erraten:", percent_right)
+
