@@ -19,8 +19,8 @@ a2 = np.array([[0, 1], [0, 2], [0.5, np.sqrt(3)/2]])  # 60° angle
 # Generate lattice Points of specific lattic Vectors and Integer Range
 def generate_lattice_points(a1, a2, N):
     lattice_points = []
-    for i in range(-N, N+1):
-        for j in range(-N, N+1):
+    for i in range(N):
+        for j in range(N):
             point = i * a1 + j * a2
             lattice_points.append(point)
     return np.array(lattice_points)

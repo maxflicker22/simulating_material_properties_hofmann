@@ -28,7 +28,7 @@ a1_mp = np.array([1, 0], dtype=np.float32)
 a2_mp = np.array([0.3420, 0.9397], dtype=np.float32)  # cos(70°), sin(70°)
 
 # Example input shape: (2 * n + 1)²
-n = 50 # Change this to your actual grid size
+n = 10 # Change this to your actual grid size
 
 # Generate reciprocal lattice points
 lattice_points_0 = return_reciprocal_lattice_points(a1_tp, a2_tp, n)
@@ -45,11 +45,11 @@ input4 = torch.tensor(lattice_points_3.tolist(), dtype=torch.float32)  # Example
 input5 = torch.tensor(lattice_points_4.tolist(), dtype=torch.float32)  # Example input
 
 # Check the shape of the inputs
-assert input1.shape == (2, (2*n + 1) ** 2), "Input1 shape mismatch: expected (2, (2n+1)²), got {}".format(input1.shape)
-assert input2.shape == (2, (2*n + 1) ** 2), "Input2 shape mismatch: expected (2, (2n+1)²), got {}".format(input2.shape)
-assert input3.shape == (2, (2*n + 1) ** 2), "Input3 shape mismatch: expected (2, (2n+1)²), got {}".format(input3.shape)
-assert input4.shape == (2, (2*n + 1) ** 2), "Input2 shape mismatch: expected (2, (2n+1)²), got {}".format(input2.shape)
-assert input5.shape == (2, (2*n + 1) ** 2), "Input3 shape mismatch: expected (2, (2n+1)²), got {}".format(input3.shape)
+assert input1.shape == (2, (n) ** 2), "Input1 shape mismatch: expected (2, (2n+1)²), got {}".format(input1.shape)
+assert input2.shape == (2, (n) ** 2), "Input2 shape mismatch: expected (2, (2n+1)²), got {}".format(input2.shape)
+assert input3.shape == (2, (n) ** 2), "Input3 shape mismatch: expected (2, (2n+1)²), got {}".format(input3.shape)
+assert input4.shape == (2, (n) ** 2), "Input2 shape mismatch: expected (2, (2n+1)²), got {}".format(input2.shape)
+assert input5.shape == (2, (n) ** 2), "Input3 shape mismatch: expected (2, (2n+1)²), got {}".format(input3.shape)
 
 
 #print("input1 shape:", input1.shape)  # Should be (2, n²)   
@@ -98,17 +98,18 @@ outputs = [output1, output2, output3, output4, output5]
 
 
 # Number of splits per input
-num_splits = 64
+num_splits = 1
 
 X_list = []
 Y_list = []
+print("inputs length:", len(inputs))  # Should be 5
 
 for inp, out in zip(inputs, outputs):
     # inp: shape (2, total_points), e.g., (2, (2*n+1)²)
     # out: shape (1, 5)
     #print("inp shape:", inp.shape)  # Should be (2, total_points)
     splits = torch.chunk(inp, num_splits, dim=1) # List of 8 tensors, each (2, total_points/8)
-    
+    #print("splits shape:", [split.shape for split in splits])  # Should be (2, total_points/8)     
     # Extract min length of the certain dimension
     min_len = 2 * min(split.shape[1] for split in splits) # 2 * Because of x and y components
     
@@ -124,6 +125,7 @@ for inp, out in zip(inputs, outputs):
 #print("X_list length:", len(X_list))  # Should be 5*num_splits = 40
 X = torch.stack(X_list)  # Shape: (5*num_splits, input_dim)
 Y = torch.stack(Y_list)  # Shape: (5*num_splits, 5)
+print("X:", X)  
 
 #print("X shape:", X.shape)
 #print("Y shape:", Y.shape)

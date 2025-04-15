@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 # Get training and test data
-input_train, target_train, input_test, target_test = get_train_data(3, shuffle=True)
+input_train, target_train, input_test, target_test = get_train_data(1, shuffle=True)
 
 # Split input into x and y components (shape: (N, n²/2))
 half_index = input_train.shape[1] // 2
