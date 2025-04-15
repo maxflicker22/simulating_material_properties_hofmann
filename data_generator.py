@@ -30,29 +30,35 @@ def normalize_to_unit_box(tensor):
 
     x = tensor[0]
     y = tensor[1]
+    x = x - x.mean()
+    y = y - y.mean()
     max_val = torch.max(x.abs().max(), y.abs().max()) + 1e-8
-    return tensor / max_val
-
+    return torch.stack([x / max_val, y / max_val])
 
 # --- PyTorch Dataset ---
 class BravaisLatticeDataset(Dataset):
-    def __init__(self, n_points=100, samples_per_type=50, seed=42):
+    def __init__(self, n_points=100, samples_per_type=50, seed=42, num_splits=16):
         np.random.seed(seed)
         self.data = []
         self.labels = []
         # Berechne n aus gewünschter Punktzahl: (2n+1)^2 = n_points
         n = int((np.sqrt(n_points) - 1) // 2)
 
-      
-
         for name, (a1, a2) in BRAVAIS_TYPES.items():
             b1, b2 = reciprocal_lattice_2d(a1, a2)
             points = generate_lattice_points(b1, b2, n)  # shape: (2, (2n+1)^2)
             points = normalize_to_unit_box(points)
 
-            for _ in range(samples_per_type):
-                self.data.append(torch.tensor(points.flatten(), dtype=torch.float32))
-                self.labels.append(TYPE_TO_ONEHOT[name])
+            split_size = points.shape[1] // num_splits
+            if split_size == 0:
+                split_size = 1  # fallback wenn num_splits zu groß ist
+
+            # Schneide abschnittsweise gleich große Teile zu
+            for i in range(0, points.shape[1], split_size):
+                chunk = points[:, i:i+split_size]
+                if chunk.shape[1] == split_size:
+                    self.data.append(chunk.flatten())
+                    self.labels.append(TYPE_TO_ONEHOT[name])
 
         self.data = torch.stack(self.data)
         self.labels = torch.stack(self.labels)

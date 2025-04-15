@@ -56,9 +56,9 @@ class BravaisLatticeRecognitionNet(nn.Module):
 ### Hyperparameter setting and optimization ###
 
 BATCH_SIZE = 10
-N_POINTS = 100
+N_POINTS = 10000
 SAMPLE_PER_TYPE = 10
-NUM_ITERATIONS = 3000
+NUM_ITERATIONS = 2500
 LEARNING_RATE = 5e-2
 HIDDEN_DIM = 256
 NUM_LAYERS = 1
