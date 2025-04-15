@@ -7,7 +7,7 @@ import numpy as np
 from generate_test_data import generate_lattice_points
 
 # Lade Daten
-train_loader, test_loader = get_train_data(batch_size=1, n_points=100, samples_per_type=100)
+train_loader, test_loader, input_dim = get_train_data(batch_size=1, n_points=100, samples_per_type=100)
 
 # Beispielbatch laden
 for x, y in train_loader:
@@ -17,9 +17,19 @@ for x, y in train_loader:
     label_vec = y[0]  # shape: (5,)
 
     # Zurück in 2D Punkte aufteilen
-    n = int((input_vec.shape[0] // 2) ** 0.5)
+    n = int(((input_vec.shape[0] // 2) ** 0.5))
     x_vals = input_vec[:n*n].reshape(n, n).flatten().tolist()
-    y_vals = input_vec[n*n:].reshape(n, n).flatten().tolist()
+    y_vals = input_vec[n*n:2*n*n].reshape(n, n).flatten().tolist()
+
+    print(f"Input vector length: {input_vec.shape[0]}")
+    print(f"n: {n}, expected x/y points: {n*n}")
+    print(f"x min/max: {min(x_vals)} / {max(x_vals)}")
+    print(f"y min/max: {min(y_vals)} / {max(y_vals)}")
+    print("input_vec:", input_vec)
+    print("y_vals:", y_vals)
+
+
+
 
     # Reziprokes Gitter plotten
     plt.figure(figsize=(12, 6))
@@ -49,3 +59,5 @@ for x, y in train_loader:
     plt.show()
 
     break  # Nur ein Beispiel anzeigen
+
+# %%
