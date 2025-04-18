@@ -1,16 +1,15 @@
 #%%
 import comet_ml
 COMET_API_KEY = "YpvtAhxzAypP59UQx6Wxey7vk"
-COMET_PROJECT_NAME = "bravais-lattice-recognition_5_lattice_vectors_classification"
+COMET_PROJECT_NAME = "bravais-lattice-recognition_5_lattice_vectors_classification_leed_image"
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from data_generator import get_train_data, get_label_name, BRAVAIS_TYPES
+from data_generator import get_label_name, BRAVAIS_TYPES, get_train_data_from_file
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from generate_test_data import generate_lattice_points
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
@@ -23,7 +22,7 @@ print("Number of GPUs:", torch.cuda.device_count())
 assert COMET_API_KEY != "", "Please insert your Comet API Key"
 
 class BravaisLatticeRecognitionNet(nn.Module):
-    def __init__(self, num_points, vocab_size=5, hidden_dim=128, num_layers=3):
+    def __init__(self, num_points, vocab_size=5, hidden_dim=128*128, num_layers=3):
         super(BravaisLatticeRecognitionNet, self).__init__()
         self.hidden_layers = nn.ModuleList()
         self.input_dim = num_points
@@ -40,11 +39,10 @@ class BravaisLatticeRecognitionNet(nn.Module):
 
 ### Hyperparameter setting and optimization ###
 BATCH_SIZE = 4 # Trial and error
-N_POINTS = 320 # More like informed Guess
-NUM_ITERATIONS = 2500 # Trial and error
-LEARNING_RATE = 5e-2 # Trial and error
-HIDDEN_DIM = 256 # Trial and error
-NUM_LAYERS = 1  # Trial and error
+NUM_ITERATIONS = 1000 # Trial and error
+LEARNING_RATE = 5e-3 # Trial and error
+HIDDEN_DIM = int(128*128*1.5) # Trial and error
+NUM_LAYERS = 3  # Trial and error
 VOCAB_SIZE = 5  # Givven by the number of Bravais types
 ACTIVATION_FUNC = "ReLU" # More like informed Guess
 
@@ -55,11 +53,10 @@ params = dict(
   hidden_dim = HIDDEN_DIM,
   num_layers = NUM_LAYERS,
   vocab_size = VOCAB_SIZE,
-  num_points = N_POINTS,
   activation = ACTIVATION_FUNC,
 )
 
-train_loader, test_loader, input_dim = get_train_data(batch_size=BATCH_SIZE, n_points=N_POINTS)
+train_loader, test_loader, input_dim = get_train_data_from_file(batch_size=BATCH_SIZE)
 print("Input dimension:", input_dim)
 model = BravaisLatticeRecognitionNet(
     num_points=input_dim,
@@ -92,7 +89,7 @@ experiment = create_experiment()
 
 if hasattr(tqdm, '_instances'): tqdm._instances.clear()
 for iter in tqdm(range(params["num_training_iterations"])):
-    train_loader, _, _ = get_train_data(batch_size=BATCH_SIZE, n_points=N_POINTS)
+    train_loader, _, _ = get_train_data_from_file(batch_size=BATCH_SIZE)
     for x_batch, y_batch in train_loader:
         model.train()
         optimizer.zero_grad()
@@ -123,7 +120,7 @@ def predict_one_hot(model, x):
 y_true = []
 y_pred = []
 
-train_loader, test_loader, input_dim = get_train_data(batch_size=1000, n_points=N_POINTS)
+train_loader, test_loader, input_dim = get_train_data_from_file(batch_size=BATCH_SIZE)
 #%%
 for x_batch, y_batch in test_loader:
     preds = predict_one_hot(model, x_batch)

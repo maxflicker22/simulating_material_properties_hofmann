@@ -212,7 +212,7 @@ def plot_dataset(filename="dataset.pt", num_samples=5):
   
     for x, y in train_loader:
         for i in range(num_samples):
-            input_vec = x[i]  # shape: (2 * n²,)
+            input_vec = x[i]  # shape: (n²,)
             label_vec = y[i]  # shape: (5,)
 
             # Zurück in 2D Punkte aufteilen
@@ -252,23 +252,9 @@ def plot_dataset(filename="dataset.pt", num_samples=5):
 
 
 #generate_test_data_and_store("dataset.pt")
-plot_dataset("dataset.pt", num_samples=10)
-
-"""
-# Example usage 2d Gaussian
-if __name__ == "__main__":
-    x = np.linspace(-1, 1, 1000)
-    y = np.linspace(-1, 1, 1000)
-    maxima = np.array([[0.5, 0.5], [-0.5, -0.5], [-0.5, 0.5], [0.5, -0.5]])
+#plot_dataset("dataset.pt", num_samples=10)
 
 
-    Z = gaussian_2d(x, y, maxima, 0.02, 0.02)
-
-    plt.imshow(Z, extent=(-1, 1, -1, 1), origin='lower')
-    plt.colorbar()
-    plt.title("2D Gaussian")
-    plt.show()
-"""
 
 
 
