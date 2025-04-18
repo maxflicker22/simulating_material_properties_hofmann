@@ -7,7 +7,7 @@ import numpy as np
 from generate_test_data import generate_lattice_points
 
 # Lade Daten
-train_loader, test_loader, input_dim = get_train_data(batch_size=1, n_points=100, samples_per_type=100)
+train_loader, test_loader, input_dim = get_train_data(batch_size=1, n_points=32, samples_per_type=100)
 
 # Beispielbatch laden
 for x, y in train_loader:

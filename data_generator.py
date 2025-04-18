@@ -37,12 +37,19 @@ def normalize_to_unit_box(tensor):
 
 # --- PyTorch Dataset ---
 class BravaisLatticeDataset(Dataset):
-    def __init__(self, n_points=100, samples_per_type=50, seed=42, num_splits=16):
+    def __init__(self, n_points=32, seed=42, num_splits=4):
         np.random.seed(seed)
         self.data = []
         self.labels = []
         # Berechne n aus gewünschter Punktzahl: (2n+1)^2 = n_points
         n = int((np.sqrt(n_points) - 1) // 2)
+
+        # Berechne num der splits
+        if n_points / num_splits > 8:
+            num_splits = int(n_points / 8)
+        if num_splits < 1:
+            num_splits = 1
+
 
         for name, (a1, a2) in BRAVAIS_TYPES.items():
             b1, b2 = reciprocal_lattice_2d(a1, a2)
@@ -63,9 +70,9 @@ class BravaisLatticeDataset(Dataset):
         self.data = torch.stack(self.data)
         self.labels = torch.stack(self.labels)
 
-        perm = torch.randperm(len(self.data))
-        self.data = self.data[perm]
-        self.labels = self.labels[perm]
+        #perm = torch.randperm(len(self.data))
+        #self.data = self.data[perm]
+        #self.labels = self.labels[perm]
 
     def __len__(self):
         return len(self.data)

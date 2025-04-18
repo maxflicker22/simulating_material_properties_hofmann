@@ -39,9 +39,8 @@ class BravaisLatticeRecognitionNet(nn.Module):
         return self.output_layer(x)
 
 ### Hyperparameter setting and optimization ###
-BATCH_SIZE = 10
-N_POINTS = 50
-SAMPLE_PER_TYPE = 10
+BATCH_SIZE = 4
+N_POINTS = 320
 NUM_ITERATIONS = 2500
 LEARNING_RATE = 5e-2
 HIDDEN_DIM = 256
@@ -60,8 +59,8 @@ params = dict(
   activation = ACTIVATION_FUNC,
 )
 
-train_loader, test_loader, input_dim = get_train_data(batch_size=BATCH_SIZE, n_points=N_POINTS, samples_per_type=SAMPLE_PER_TYPE)
-
+train_loader, test_loader, input_dim = get_train_data(batch_size=BATCH_SIZE, n_points=N_POINTS)
+print("Input dimension:", input_dim)
 model = BravaisLatticeRecognitionNet(
     num_points=input_dim,
     vocab_size=params["vocab_size"],
@@ -93,7 +92,7 @@ experiment = create_experiment()
 
 if hasattr(tqdm, '_instances'): tqdm._instances.clear()
 for iter in tqdm(range(params["num_training_iterations"])):
-    train_loader, _, _ = get_train_data(batch_size=BATCH_SIZE, n_points=N_POINTS, samples_per_type=SAMPLE_PER_TYPE)
+    train_loader, _, _ = get_train_data(batch_size=BATCH_SIZE, n_points=N_POINTS)
     for x_batch, y_batch in train_loader:
         model.train()
         optimizer.zero_grad()
@@ -124,8 +123,11 @@ def predict_one_hot(model, x):
 y_true = []
 y_pred = []
 
+train_loader, test_loader, input_dim = get_train_data(batch_size=1000, n_points=N_POINTS)
+#%%
 for x_batch, y_batch in test_loader:
     preds = predict_one_hot(model, x_batch)
+    print("Predictions shape:", preds.shape)
     y_true.extend(y_batch.argmax(dim=1).cpu().tolist())
     y_pred.extend(preds.argmax(dim=1).cpu().tolist())
 
@@ -140,6 +142,12 @@ plt.tight_layout()
 plt.savefig("confusion_matrix.png")
 #plt.show()
 
+# Accuracy
+
+accuracy = cm.diagonal().sum() / cm.sum()
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Accuracy: {accuracy:.4f}", file=open("accuracy.txt", "w"))
+
 # Logge Bild zu Comet
 experiment = create_experiment()
 experiment.log_image("confusion_matrix.png")
@@ -153,3 +161,5 @@ experiment.log_image("confusion_matrix.png")
 #)
 
 experiment.end()
+
+# %%
