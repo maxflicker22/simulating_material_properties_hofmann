@@ -1,6 +1,6 @@
 import numpy as np
 
-quadratmeter = 60
+quadratmeter = 50
 qm_preis = 2800  # €/qm
 kaufpreis = qm_preis * quadratmeter  # Kaufpreis in €
 qm_preis_miete = 10.
@@ -13,7 +13,7 @@ nebenkosten = kaufpreis * nebenkosten_satz
 kreditbetrag = kaufpreis + nebenkosten  # Kredit = Kaufpreis + Nebenkosten
 
 zinssatz = 0.0237      # 4 % fix
-laufzeit_jahre = 18
+laufzeit_jahre = 16
 monatszins = zinssatz / 12
 n_monate = laufzeit_jahre * 12
 
@@ -27,7 +27,7 @@ etf_rendite = 0.075
 vergleichsjahre = laufzeit_jahre
 vergleichsmonate = vergleichsjahre * 12
 immobilienwert = kaufpreis  # bleibt konstant
-immobilenwertsteigerung = 0.02
+immobilenwertsteigerung = 0.04
 immobilienwert *= (1 + immobilenwertsteigerung) ** vergleichsjahre
 mietzinssteigerung = 0.01
 

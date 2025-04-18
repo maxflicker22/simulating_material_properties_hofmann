@@ -7,7 +7,7 @@ import numpy as np
 from generate_test_data import generate_lattice_points
 
 # Lade Daten
-train_loader, test_loader, input_dim = get_train_data(batch_size=1, n_points=32, samples_per_type=100)
+train_loader, test_loader, input_dim = get_train_data(batch_size=10, n_points=128)
 
 # Beispielbatch laden
 for x, y in train_loader:
@@ -17,16 +17,14 @@ for x, y in train_loader:
     label_vec = y[0]  # shape: (5,)
 
     # Zurück in 2D Punkte aufteilen
-    n = int(((input_vec.shape[0] // 2) ** 0.5))
-    x_vals = input_vec[:n*n].reshape(n, n).flatten().tolist()
-    y_vals = input_vec[n*n:2*n*n].reshape(n, n).flatten().tolist()
+    n = int(((input_vec.shape[0]) ** 0.5))
+    xy_mesh_vals = input_vec.view(n,n).tolist()
+    xy_mesh_vals = np.array(xy_mesh_vals)
 
     print(f"Input vector length: {input_vec.shape[0]}")
     print(f"n: {n}, expected x/y points: {n*n}")
-    print(f"x min/max: {min(x_vals)} / {max(x_vals)}")
-    print(f"y min/max: {min(y_vals)} / {max(y_vals)}")
-    print("input_vec:", input_vec)
-    print("y_vals:", y_vals)
+    #print(f"x min/max: {min(xy_mesh_vals)} / {max(xy_mesh_vals)}")
+    print("input_vec:", xy_mesh_vals)
 
 
 
@@ -35,17 +33,19 @@ for x, y in train_loader:
     plt.figure(figsize=(12, 6))
 
     plt.subplot(1, 2, 1)
-    plt.scatter(x_vals, y_vals, s=30)
-    plt.title(f"Reciprocal Lattice\nClass: {get_label_name(label_vec)}")
+    plt.imshow(xy_mesh_vals, cmap='viridis', interpolation='nearest')
+    plt.colorbar(label='Intensity')
+    plt.title("Reciprocal Lattice")
     plt.xlabel("kx")
     plt.ylabel("ky")
     plt.grid(True)
     plt.axis("equal")
 
+
     # Reales Gitter plotten (aus a1, a2)
     name = get_label_name(label_vec)
     a1, a2 = BRAVAIS_TYPES[name]
-    real_points = generate_lattice_points(a1, a2, n)
+    real_points = generate_lattice_points(a1, a2, 8)
 
     plt.subplot(1, 2, 2)
     plt.scatter(real_points[0], real_points[1], s=30, color='orange')

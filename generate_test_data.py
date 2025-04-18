@@ -16,3 +16,5 @@ def generate_lattice_points(b1, b2, N):
             point = i * b1 + j * b2
             lattice_points.append(point)
     return np.array(lattice_points).T.astype(np.float32)  # shape: (2, (2N+1)^2)
+
+    

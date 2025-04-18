@@ -39,14 +39,14 @@ class BravaisLatticeRecognitionNet(nn.Module):
         return self.output_layer(x)
 
 ### Hyperparameter setting and optimization ###
-BATCH_SIZE = 4
-N_POINTS = 320
-NUM_ITERATIONS = 2500
-LEARNING_RATE = 5e-2
-HIDDEN_DIM = 256
-NUM_LAYERS = 1
-VOCAB_SIZE = 5
-ACTIVATION_FUNC = "ReLU"
+BATCH_SIZE = 4 # Trial and error
+N_POINTS = 320 # More like informed Guess
+NUM_ITERATIONS = 2500 # Trial and error
+LEARNING_RATE = 5e-2 # Trial and error
+HIDDEN_DIM = 256 # Trial and error
+NUM_LAYERS = 1  # Trial and error
+VOCAB_SIZE = 5  # Givven by the number of Bravais types
+ACTIVATION_FUNC = "ReLU" # More like informed Guess
 
 params = dict(
   num_training_iterations = NUM_ITERATIONS,
