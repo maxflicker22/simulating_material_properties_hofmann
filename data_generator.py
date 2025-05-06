@@ -1,7 +1,12 @@
+import itertools
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
+from config import (
+    BATCH_SIZE, NUM_ITERATIONS, LEARNING_RATE,
+    HIDDEN_DIM, NUM_LAYERS, VOCAB_SIZE, IMAGE_DIM, K_MAX_PEAKS, DEVICE, SEED
+)
 
 
 # --- Bravais Gitterdefinitionen ---
@@ -55,9 +60,9 @@ def normalize_to_unit_box(tensor):
     return torch.stack([x / max_val, y / max_val])
 
 # --- Caluclate reciprocal lattice ---
-def reciprocal_lattice_2d(a1, a2):
-    a1_3d = np.array([a1[0], a1[1], 0])
-    a2_3d = np.array([a2[0], a2[1], 0])
+def reciprocal_lattice_2d(a1, a2, a):
+    a1_3d = np.array([a1[0], a1[1], 0]) * a
+    a2_3d = np.array([a2[0], a2[1], 0]) * a
     area = np.cross(a1_3d, a2_3d)[2]
     b1 = 2 * np.pi * np.cross([0, 0, 1], a2_3d)[:2] / area
     b2 = 2 * np.pi * np.cross(a1_3d, [0, 0, 1])[:2] / area
@@ -83,9 +88,7 @@ def gaussian_2d(x, y, means, sigma_x=0.01, sigma_y=0.01):
         x0 = means[i, 0]
         y0 = means[i, 1]
         b = -((X - x0) ** 2 / (2 * sigma_x ** 2) + (Y - y0) ** 2 / (2 * sigma_y ** 2))
-
-        Z += a * np.exp(b)
-        
+        Z += a * np.exp(b)   
     return Z
 
     
@@ -93,7 +96,7 @@ def gaussian_2d(x, y, means, sigma_x=0.01, sigma_y=0.01):
 
 # --- PyTorch Dataset ---
 class BravaisLatticeDataset(Dataset):
-    def __init__(self, n_points=64, seed=42, num_pixel=128, sigma_x=0.01, sigma_y=0.01):
+    def __init__(self, n_points=K_MAX_PEAKS, seed=SEED, num_pixel=IMAGE_DIM, sigma_x=0.01, sigma_y=0.01, a=1):
         np.random.seed(seed)
         self.data = []
         self.labels = []
@@ -101,7 +104,7 @@ class BravaisLatticeDataset(Dataset):
         n = int((np.sqrt(n_points) - 1) // 2)
 
         for name, (a1, a2) in BRAVAIS_TYPES.items():
-            b1, b2 = reciprocal_lattice_2d(a1, a2)
+            b1, b2 = reciprocal_lattice_2d(a1, a2, a)
             points = generate_lattice_points(b1, b2, n)  # shape: (2, (2n+1)^2)
             points = normalize_to_unit_box(points)
 
@@ -153,20 +156,19 @@ def get_train_data(batch_size=16, test_split=0.2, **kwargs):
     return train_loader, test_loader, dataset[0][0].shape[0]
 
 def generate_test_data_and_store(filename="dataset.pt"):
-    # Beispielaufruf
-    print("Generating datasets...")
-    d1 = BravaisLatticeDataset(n_points=32, num_pixel=128, sigma_x=0.01, sigma_y=0.01)
-    d2 = BravaisLatticeDataset(n_points=96, num_pixel=128, sigma_x=0.01, sigma_y=0.01)
-    d3 = BravaisLatticeDataset(n_points=128, num_pixel=128, sigma_x=0.02, sigma_y=0.02)
-    d4 = BravaisLatticeDataset(n_points=64, num_pixel=128, sigma_x=0.02, sigma_y=0.02)
-    d5 = BravaisLatticeDataset(n_points=48, num_pixel=128, sigma_x=0.01, sigma_y=0.01)
-    d6 = BravaisLatticeDataset(n_points=64, num_pixel=128, sigma_x=0.015, sigma_y=0.015)
-    d7 = BravaisLatticeDataset(n_points=128, num_pixel=128, sigma_x=0.03, sigma_y=0.03)
-    d8 = BravaisLatticeDataset(n_points=256, num_pixel=128, sigma_x=0.015, sigma_y=0.015)
-    print("Combining...")
-    data = torch.cat([d1.data, d2.data, d3.data, d4.data, d5.data, d6.data, d7.data, d8.data], dim=0)
-    labels = torch.cat([d1.labels, d2.labels, d3.labels, d4.labels, d5.labels, d6.labels, d7.labels, d8.labels], dim=0)
+    a_list = [1, 3, 5, 2]
+    sigma_list = [0.01, 0.03, 0.015, 0.02]
+    n_points_list = [32, 96, 128, 256, 64, 48]
 
+    all_datasets = []
+
+    for (a, sigma, n_points) in itertools.product(a_list, sigma_list, n_points_list):
+        d = BravaisLatticeDataset(n_points, sigma_x=sigma, sigma_y=sigma, a=a)
+        all_datasets.append(d)
+
+    data = torch.cat([d.data for d in all_datasets], dim=0) # dim = 0 -> Zeilenweise ranhängen
+    labels = torch.cat([d.labels for d in all_datasets], dim=0)
+   
     print("Shuffling...")
     perm = torch.randperm(len(data))
     data = data[perm]
@@ -193,7 +195,7 @@ def get_train_data_from_file(filepath="dataset.pt", batch_size=16, test_split=0.
     split = int(N * (1 - test_split))
 
     # Reproducible random split
-    generator = torch.Generator().manual_seed(42)
+    generator = torch.Generator().manual_seed(SEED)
     train_set, test_set = torch.utils.data.random_split(dataset, [split, N - split], generator=generator)
 
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
@@ -252,7 +254,7 @@ def plot_dataset(filename="dataset.pt", num_samples=5):
 
 
 #generate_test_data_and_store("dataset.pt")
-#plot_dataset("dataset.pt", num_samples=10)
+plot_dataset("dataset.pt", num_samples=20)
 
 
 

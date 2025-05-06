@@ -1,7 +1,7 @@
 #%%
 import comet_ml
 COMET_API_KEY = "YpvtAhxzAypP59UQx6Wxey7vk"
-COMET_PROJECT_NAME = "bravais-lattice-recognition_5_lattice_vectors_classification_leed_image"
+COMET_PROJECT_NAME = "bravais-lattice-recognition_5_lattice_vectors_classification_leed_image_to_peaks_xy"
 from tqdm import tqdm
 import torch
 import torch.nn as nn
@@ -12,6 +12,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+from peak_finder import get_fixed_number_of_peaks
+from config import (
+    BATCH_SIZE, NUM_ITERATIONS, LEARNING_RATE,
+    HIDDEN_DIM, NUM_LAYERS, VOCAB_SIZE, IMAGE_DIM, K_MAX_PEAKS, DEVICE, ACTIVATION_FUNC, SEED
+)
 
 # Check that we are using a GPU, if not switch runtimes
 print("PyTorch version:", torch.__version__)
@@ -21,8 +26,11 @@ print("Number of GPUs:", torch.cuda.device_count())
 
 assert COMET_API_KEY != "", "Please insert your Comet API Key"
 
+
+
+
 class BravaisLatticeRecognitionNet(nn.Module):
-    def __init__(self, num_points, vocab_size=5, hidden_dim=128*128, num_layers=3):
+    def __init__(self, num_points, vocab_size=5, hidden_dim=IMAGE_DIM*IMAGE_DIM, num_layers=3):
         super(BravaisLatticeRecognitionNet, self).__init__()
         self.hidden_layers = nn.ModuleList()
         self.input_dim = num_points
@@ -37,14 +45,7 @@ class BravaisLatticeRecognitionNet(nn.Module):
             x = self.activation(layer(x))
         return self.output_layer(x)
 
-### Hyperparameter setting and optimization ###
-BATCH_SIZE = 4 # Trial and error
-NUM_ITERATIONS = 1000 # Trial and error
-LEARNING_RATE = 5e-3 # Trial and error
-HIDDEN_DIM = int(128*128*1.5) # Trial and error
-NUM_LAYERS = 3  # Trial and error
-VOCAB_SIZE = 5  # Givven by the number of Bravais types
-ACTIVATION_FUNC = "ReLU" # More like informed Guess
+
 
 params = dict(
   num_training_iterations = NUM_ITERATIONS,
@@ -56,10 +57,37 @@ params = dict(
   activation = ACTIVATION_FUNC,
 )
 
+def translate_batch_image_to_peak_coordinates_batch(loader):
+    peaks_xy_list = []
+    all_labels = []
+
+    for images, labels in loader:
+        for i in range(images.shape[0]):
+            img = np.array(images[i].view(IMAGE_DIM, IMAGE_DIM).cpu().tolist())
+            peaks_xy = get_fixed_number_of_peaks(img, k=K_MAX_PEAKS)
+            peaks_xy_list.append(peaks_xy.flatten())
+            all_labels.append(labels[i])
+            #plt.title(f"Label: {get_label_name(labels[i])}")
+            #plt.axis('off')
+            #plt.imshow(img, cmap='gray')
+            #plt.show()
+            #plt.title(f"Label: {get_label_name(labels[i])}")
+            #plt.axis('off')
+            #plt.scatter(peaks_xy[:, 0], peaks_xy[:, 1], c='red', s=20)
+            #plt.show()
+    peaks_xy_list_tensor = torch.tensor(peaks_xy_list, dtype=torch.float32)
+    labels_tensor = torch.stack(all_labels)
+    return peaks_xy_list_tensor, labels_tensor
+    
 train_loader, test_loader, input_dim = get_train_data_from_file(batch_size=BATCH_SIZE)
-print("Input dimension:", input_dim)
+# Translate batch images to peak coordinates
+train_loader_peaks_xy, train_loader_labels = translate_batch_image_to_peak_coordinates_batch(train_loader)
+test_loader_peaks_xy, test_loader_labels = translate_batch_image_to_peak_coordinates_batch(test_loader)
+
+#%%
+print("Input dimension:", train_loader_peaks_xy.shape[1])
 model = BravaisLatticeRecognitionNet(
-    num_points=input_dim,
+    num_points=train_loader_peaks_xy.shape[1],
     vocab_size=params["vocab_size"],
     hidden_dim=params["hidden_dim"],
     num_layers=params["num_layers"]
@@ -90,13 +118,16 @@ experiment = create_experiment()
 if hasattr(tqdm, '_instances'): tqdm._instances.clear()
 for iter in tqdm(range(params["num_training_iterations"])):
     train_loader, _, _ = get_train_data_from_file(batch_size=BATCH_SIZE)
-    for x_batch, y_batch in train_loader:
-        model.train()
-        optimizer.zero_grad()
-        y_hat = model(x_batch)
-        loss = loss_fn(y_hat, y_batch)
-        loss.backward()
-        optimizer.step()
+    train_loader_peaks_xy, train_loader_labels = translate_batch_image_to_peak_coordinates_batch(train_loader)
+    
+    model.train()
+    optimizer.zero_grad()
+    y_hat = model(train_loader_peaks_xy)
+    loss = loss_fn(y_hat, train_loader_labels)
+    loss.backward()
+    optimizer.step()
+
+    # Log metrics to Comet
     experiment.log_metric("loss", loss.item(), step=iter)
     history.append(loss.item())
     if iter % 100 == 0:
@@ -111,7 +142,7 @@ def predict_one_hot(model, x):
     model.eval()
     with torch.no_grad():
         logits = model(x)
-        probs = torch.softmax(logits, dim=1)
+        probs = torch.softmax(logits, dim=1) # Transfer to probabilities
         predicted_indices = probs.argmax(dim=1)
         one_hot = F.one_hot(predicted_indices, num_classes=probs.size(1)).float()
         return one_hot
@@ -120,13 +151,12 @@ def predict_one_hot(model, x):
 y_true = []
 y_pred = []
 
-train_loader, test_loader, input_dim = get_train_data_from_file(batch_size=BATCH_SIZE)
 #%%
-for x_batch, y_batch in test_loader:
-    preds = predict_one_hot(model, x_batch)
-    print("Predictions shape:", preds.shape)
-    y_true.extend(y_batch.argmax(dim=1).cpu().tolist())
-    y_pred.extend(preds.argmax(dim=1).cpu().tolist())
+
+preds = predict_one_hot(model, test_loader_peaks_xy)
+print("Predictions shape:", preds.shape)
+y_true.extend(test_loader_labels.argmax(dim=1).cpu().tolist())
+y_pred.extend(preds.argmax(dim=1).cpu().tolist())
 
 # Confusion Matrix
 cm = confusion_matrix(y_true, y_pred)
@@ -137,7 +167,7 @@ plt.ylabel("True")
 plt.title("Confusion Matrix")
 plt.tight_layout()
 plt.savefig("confusion_matrix.png")
-#plt.show()
+plt.show()
 
 # Accuracy
 
